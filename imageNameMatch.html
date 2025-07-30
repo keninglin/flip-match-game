@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖片名稱配對翻牌遊戲</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            min-height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin: 0 0 20px 0;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .upload-section {
+            background: rgba(248, 249, 250, 0.9);
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .upload-section:hover {
+            border-color: #007bff;
+            background: #e7f3ff;
+        }
+
+        .upload-section.dragover {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .upload-section.hidden {
+            display: none;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .upload-btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background: #0056b3;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 0;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .control-btn {
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .control-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 25px;
+            padding: 20px;
+            background: rgba(248, 249, 250, 0.8);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            min-height: calc(100vh - 300px);
+        }
+
+        .card {
+            width: 100%;
+            aspect-ratio: 1;
+            max-width: 220px;
+            position: relative;
+            cursor: pointer;
+            margin: 0 auto;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            border: 3px solid #ddd;
+        }
+
+        .card-front {
+            background: linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+            transform: rotateY(180deg);
+        }
+
+        .card-back {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 50px;
+            font-weight: bold;
+        }
+
+        .card-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 7px;
+        }
+
+        .card-text {
+            padding: 10px;
+            word-break: break-all;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            -webkit-box-orient: vertical;
+            font-size: 35px;
+            line-height: 1.2;
+        }
+
+        .card.matched {
+            opacity: 0.7;
+            transform: scale(0.95);
+        }
+
+        .card.matched .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .score-board {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(233, 236, 239, 0.9);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .score-item {
+            display: inline-block;
+            margin: 0 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .success-message {
+            text-align: center;
+            padding: 20px;
+            background: rgba(212, 237, 218, 0.95);
+            color: #155724;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+                margin-bottom: 15px;
+            }
+
+            .game-board {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 15px;
+                padding: 15px;
+                min-height: calc(100vh - 250px);
+            }
+            
+            .card {
+                max-width: 180px;
+            }
+            
+            .card-text {
+                font-size: 14px;
+            }
+
+            .controls {
+                padding: 10px 0;
+            }
+
+            .control-btn {
+                padding: 8px 16px;
+                font-size: 12px;
+                margin: 0 5px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .game-board {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 10px;
+                padding: 10px;
+            }
+            
+            .card {
+                max-width: 150px;
+            }
+
+            .score-item {
+                display: block;
+                margin: 5px 0;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🃏 圖片名稱配對翻牌遊戲 🃏</h1>
+        
+        <div class="upload-section" id="uploadSection">
+            <h3>上傳圖片檔案</h3>
+            <p>點擊選擇檔案或拖拽檔案到此處</p>
+            <p style="color: #666; font-size: 14px;">支援格式：JPG, PNG, GIF, WEBP</p>
+            <input type="file" id="fileInput" multiple accept="image/*">
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                📁 選擇圖片
+            </button>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" id="startBtn" onclick="startGame()" disabled>
+                🎮 開始遊戲
+            </button>
+            <button class="control-btn" id="resetBtn" onclick="resetGame()">
+                🔄 重新開始
+            </button>
+            <button class="control-btn" id="clearBtn" onclick="clearImages()">
+                🗑️ 清除圖片
+            </button>
+            <button class="control-btn" id="toggleUploadBtn" onclick="toggleUpload()" style="display: none;">
+                📁 顯示上傳區
+            </button>
+        </div>
+
+        <div class="score-board" id="scoreBoard" style="display: none;">
+            <div class="score-item">翻牌次數: <span id="attempts">0</span></div>
+            <div class="score-item">配對成功: <span id="matches">0</span></div>
+            <div class="score-item">剩餘配對: <span id="remaining">0</span></div>
+        </div>
+
+        <div class="success-message" id="successMessage" style="display: none;">
+            🎉 恭喜完成！您總共翻牌 <span id="finalAttempts"></span> 次！
+        </div>
+
+        <div class="game-board" id="gameBoard"></div>
+    </div>
+
+    <script>
+        let images = [];
+        let cards = [];
+        let flippedCards = [];
+        let matches = 0;
+        let attempts = 0;
+        let gameStarted = false;
+
+        // 檔案上傳相關
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const gameBoard = document.getElementById('gameBoard');
+        const startBtn = document.getElementById('startBtn');
+        const scoreBoard = document.getElementById('scoreBoard');
+
+        // 拖拽上傳
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            images = [];
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const fileName = file.name.replace(/\.[^/.]+$/, ""); // 移除副檔名
+                        images.push({
+                            name: fileName,
+                            src: e.target.result
+                        });
+                        
+                        if (images.length === files.length) {
+                            updateUI();
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function updateUI() {
+            if (images.length > 0) {
+                startBtn.disabled = false;
+                startBtn.textContent = `🎮 開始遊戲 (${images.length} 張圖片)`;
+            } else {
+                startBtn.disabled = true;
+                startBtn.textContent = '🎮 開始遊戲';
+            }
+        }
+
+        function createCards() {
+            cards = [];
+            let cardId = 1;
+
+            // 為每張圖片創建兩張卡片：一張顯示圖片，一張顯示名稱
+            images.forEach((image, index) => {
+                // 圖片卡片
+                cards.push({
+                    id: cardId++,
+                    type: 'image',
+                    content: image.src,
+                    pairId: index,
+                    isFlipped: false,
+                    isMatched: false
+                });
+
+                // 名稱卡片
+                cards.push({
+                    id: cardId++,
+                    type: 'text',
+                    content: image.name,
+                    pairId: index,
+                    isFlipped: false,
+                    isMatched: false
+                });
+            });
+
+            // 洗牌
+            shuffleArray(cards);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function startGame() {
+            if (images.length === 0) return;
+
+            gameStarted = true;
+            matches = 0;
+            attempts = 0;
+            flippedCards = [];
+
+            // 隱藏上傳區塊，顯示切換按鈕
+            uploadSection.classList.add('hidden');
+            document.getElementById('toggleUploadBtn').style.display = 'inline-block';
+
+            createCards();
+            renderCards();
+            updateScore();
+            
+            scoreBoard.style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        function renderCards() {
+            gameBoard.innerHTML = '';
+            
+            cards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'card';
+                cardElement.setAttribute('data-id', card.id);
+                
+                if (card.isMatched) {
+                    cardElement.classList.add('matched');
+                }
+                
+                if (card.isFlipped) {
+                    cardElement.classList.add('flipped');
+                }
+
+                cardElement.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-back">${card.id}</div>
+                        <div class="card-front">
+                            ${card.type === 'image' 
+                                ? `<img src="${card.content}" class="card-image" alt="圖片">` 
+                                : `<div class="card-text">${card.content}</div>`
+                            }
+                        </div>
+                    </div>
+                `;
+
+                cardElement.addEventListener('click', () => flipCard(card.id));
+                gameBoard.appendChild(cardElement);
+            });
+        }
+
+        function flipCard(cardId) {
+            if (!gameStarted) return;
+            
+            const card = cards.find(c => c.id === cardId);
+            if (!card || card.isFlipped || card.isMatched || flippedCards.length >= 2) return;
+
+            card.isFlipped = true;
+            flippedCards.push(card);
+            
+            const cardElement = document.querySelector(`[data-id="${cardId}"]`);
+            cardElement.classList.add('flipped');
+
+            if (flippedCards.length === 2) {
+                attempts++;
+                updateScore();
+                
+                setTimeout(() => {
+                    checkMatch();
+                }, 1000);
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            
+            if (card1.pairId === card2.pairId && card1.type !== card2.type) {
+                // 配對成功
+                card1.isMatched = true;
+                card2.isMatched = true;
+                matches++;
+                
+                const cardElement1 = document.querySelector(`[data-id="${card1.id}"]`);
+                const cardElement2 = document.querySelector(`[data-id="${card2.id}"]`);
+                cardElement1.classList.add('matched');
+                cardElement2.classList.add('matched');
+                
+                if (matches === images.length) {
+                    // 遊戲完成
+                    setTimeout(() => {
+                        gameCompleted();
+                    }, 500);
+                }
+            } else {
+                // 配對失敗，翻回來
+                card1.isFlipped = false;
+                card2.isFlipped = false;
+                
+                const cardElement1 = document.querySelector(`[data-id="${card1.id}"]`);
+                const cardElement2 = document.querySelector(`[data-id="${card2.id}"]`);
+                cardElement1.classList.remove('flipped');
+                cardElement2.classList.remove('flipped');
+            }
+            
+            flippedCards = [];
+            updateScore();
+        }
+
+        function updateScore() {
+            document.getElementById('attempts').textContent = attempts;
+            document.getElementById('matches').textContent = matches;
+            document.getElementById('remaining').textContent = images.length - matches;
+        }
+
+        function gameCompleted() {
+            gameStarted = false;
+            document.getElementById('finalAttempts').textContent = attempts;
+            document.getElementById('successMessage').style.display = 'block';
+        }
+
+        function resetGame() {
+            gameStarted = false;
+            matches = 0;
+            attempts = 0;
+            flippedCards = [];
+            
+            scoreBoard.style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+            
+            if (images.length > 0) {
+                startGame();
+            } else {
+                gameBoard.innerHTML = '';
+            }
+        }
+
+        function clearImages() {
+            images = [];
+            cards = [];
+            gameStarted = false;
+            matches = 0;
+            attempts = 0;
+            flippedCards = [];
+            
+            gameBoard.innerHTML = '';
+            scoreBoard.style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+            fileInput.value = '';
+            
+            // 顯示上傳區塊，隱藏切換按鈕
+            uploadSection.classList.remove('hidden');
+            document.getElementById('toggleUploadBtn').style.display = 'none';
+            
+            updateUI();
+        }
+
+        function toggleUpload() {
+            const toggleBtn = document.getElementById('toggleUploadBtn');
+            if (uploadSection.classList.contains('hidden')) {
+                uploadSection.classList.remove('hidden');
+                toggleBtn.textContent = '📁 隱藏上傳區';
+            } else {
+                uploadSection.classList.add('hidden');
+                toggleBtn.textContent = '📁 顯示上傳區';
+            }
+        }
+    </script>
+</body>
+</html>
