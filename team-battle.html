@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雙隊競賽圖片配對翻牌遊戲</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            min-height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin: 0 0 20px 0;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .setup-section {
+            background: rgba(248, 249, 250, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .setup-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .setup-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .setup-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .setup-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .setup-group input:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        .upload-section {
+            background: rgba(248, 249, 250, 0.9);
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .upload-section:hover {
+            border-color: #007bff;
+            background: rgba(231, 243, 255, 0.9);
+        }
+
+        .upload-section.dragover {
+            border-color: #28a745;
+            background: rgba(212, 237, 218, 0.9);
+        }
+
+        .upload-section.hidden {
+            display: none;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .upload-btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background: #0056b3;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 0;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            border-radius: 10px;
+        }
+
+        .control-btn {
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .control-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .countdown-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .countdown-display {
+            font-size: 8rem;
+            color: white;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            animation: pulse 1s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .team-status {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+
+        .team-panel {
+            flex: 1;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .team-panel.active {
+            background: rgba(40, 167, 69, 0.3);
+            border: 4px solid #28a745;
+            box-shadow: 0 0 30px rgba(40, 167, 69, 0.5);
+            transform: scale(1.05);
+        }
+
+        .team-panel.inactive {
+            background: rgba(108, 117, 125, 0.1);
+            border: 2px solid #6c757d;
+            transform: scale(0.98);
+        }
+
+        .current-turn {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #28a745;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: bold;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+
+        .team-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .team-score {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .game-timer {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 193, 7, 0.2);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 2px solid #ffc107;
+        }
+
+        .timer-display {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 25px;
+            padding: 20px;
+            background: rgba(248, 249, 250, 0.8);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            min-height: calc(100vh - 400px);
+        }
+
+        .card {
+            width: 100%;
+            aspect-ratio: 1;
+            max-width: 220px;
+            position: relative;
+            cursor: pointer;
+            margin: 0 auto;
+        }
+
+        .card.disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            border: 3px solid #ddd;
+        }
+
+        .card-front {
+            background: linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+            transform: rotateY(180deg);
+        }
+
+        .card-back {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .card-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 7px;
+        }
+
+        .card-text {
+            padding: 10px;
+            word-break: break-all;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            -webkit-box-orient: vertical;
+            font-size: 16px;
+            line-height: 1.2;
+        }
+
+        .card.matched {
+            opacity: 0.7;
+            transform: scale(0.95);
+        }
+
+        .card.matched .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .game-over-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .game-over-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .winner-announcement {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #28a745;
+        }
+
+        .final-scores {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+                margin-bottom: 15px;
+            }
+
+            .setup-row {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .team-status {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .countdown-display {
+                font-size: 6rem;
+            }
+
+            .game-board {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 15px;
+                padding: 15px;
+                min-height: calc(100vh - 350px);
+            }
+            
+            .card {
+                max-width: 180px;
+            }
+            
+            .card-text {
+                font-size: 14px;
+            }
+
+            .controls {
+                padding: 10px 0;
+            }
+
+            .control-btn {
+                padding: 8px 16px;
+                font-size: 12px;
+                margin: 0 5px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .game-board {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 10px;
+                padding: 10px;
+            }
+            
+            .card {
+                max-width: 150px;
+            }
+
+            .countdown-display {
+                font-size: 4rem;
+            }
+
+            .winner-announcement {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚔️ 雙隊競賽圖片配對翻牌遊戲 ⚔️</h1>
+        
+        <div class="setup-section" id="setupSection">
+            <h3>🎮 遊戲設定</h3>
+            <div class="setup-row">
+                <div class="setup-group">
+                    <label for="team1Name">隊伍一名稱：</label>
+                    <input type="text" id="team1Name" value="藍隊" placeholder="輸入隊伍一名稱">
+                </div>
+                <div class="setup-group">
+                    <label for="team2Name">隊伍二名稱：</label>
+                    <input type="text" id="team2Name" value="紅隊" placeholder="輸入隊伍二名稱">
+                </div>
+                <div class="setup-group">
+                    <label for="countdownTime">倒數時間（秒）：</label>
+                    <input type="number" id="countdownTime" value="3" min="1" max="10" placeholder="倒數秒數">
+                </div>
+            </div>
+        </div>
+
+        <div class="upload-section" id="uploadSection">
+            <h3>📁 上傳圖片檔案</h3>
+            <p>點擊選擇檔案或拖拽檔案到此處</p>
+            <p style="color: #666; font-size: 14px;">支援格式：JPG, PNG, GIF, WEBP</p>
+            <input type="file" id="fileInput" multiple accept="image/*">
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                📁 選擇圖片
+            </button>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" id="startBtn" onclick="startGame()" disabled>
+                🚀 開始競賽
+            </button>
+            <button class="control-btn" id="resetBtn" onclick="resetGame()">
+                🔄 重新開始
+            </button>
+            <button class="control-btn" id="clearBtn" onclick="clearImages()">
+                🗑️ 清除圖片
+            </button>
+            <button class="control-btn" id="toggleUploadBtn" onclick="toggleUpload()" style="display: none;">
+                📁 顯示上傳區
+            </button>
+        </div>
+
+        <div class="team-status" id="teamStatus" style="display: none;">
+            <div class="team-panel inactive" id="team1Panel">
+                <div class="team-name" id="team1NameDisplay">藍隊</div>
+                <div class="team-score" id="team1Score">0</div>
+            </div>
+            <div class="team-panel inactive" id="team2Panel">
+                <div class="team-name" id="team2NameDisplay">紅隊</div>
+                <div class="team-score" id="team2Score">0</div>
+            </div>
+        </div>
+
+        <div class="game-timer" id="gameTimer" style="display: none;">
+            <div class="timer-display" id="timerDisplay">00:00</div>
+            <div>遊戲時間</div>
+        </div>
+
+        <div class="game-board" id="gameBoard"></div>
+    </div>
+
+        <!-- 倒數計時覆蓋層 -->
+        <div class="countdown-overlay" id="countdownOverlay" style="display: none;">
+            <div class="countdown-display" id="countdownDisplay">
+                <div style="font-size: 2rem; margin-bottom: 20px;" id="startingTeamText">隨機選中：藍隊先開始</div>
+                <div id="countdownNumber">3</div>
+            </div>
+        </div>
+
+        <!-- 換隊倒數覆蓋層 -->
+        <div class="countdown-overlay" id="teamSwitchOverlay" style="display: none;">
+            <div class="countdown-display" id="teamSwitchDisplay" style="font-size: 4rem;">
+                <div style="font-size: 2rem; margin-bottom: 20px;">輪到</div>
+                <div id="nextTeamName">紅隊</div>
+                <div style="font-size: 2rem; margin-top: 20px;">3</div>
+            </div>
+        </div>    <!-- 遊戲結束覆蓋層 -->
+    <div class="game-over-overlay" id="gameOverOverlay" style="display: none;">
+        <div class="game-over-content">
+            <div class="winner-announcement" id="winnerAnnouncement">🏆 藍隊獲勝！</div>
+            <div class="final-scores" id="finalScores">
+                <div>藍隊：5 分</div>
+                <div>紅隊：3 分</div>
+                <div>遊戲時間：02:45</div>
+            </div>
+            <button class="control-btn" onclick="resetGame()">🔄 再來一局</button>
+        </div>
+    </div>
+
+    <script>
+        let images = [];
+        let cards = [];
+        let flippedCards = [];
+        let gameStarted = false;
+        let gameTime = 0;
+        let gameTimer = null;
+        let switchingTeam = false;
+        
+        // 隊伍相關變數
+        let currentTeam = 1; // 1 或 2
+        let team1Score = 0;
+        let team2Score = 0;
+        let team1Name = "藍隊";
+        let team2Name = "紅隊";
+
+        // DOM 元素
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const setupSection = document.getElementById('setupSection');
+        const gameBoard = document.getElementById('gameBoard');
+        const startBtn = document.getElementById('startBtn');
+        const teamStatus = document.getElementById('teamStatus');
+        const gameTimerDiv = document.getElementById('gameTimer');
+        const countdownOverlay = document.getElementById('countdownOverlay');
+        const teamSwitchOverlay = document.getElementById('teamSwitchOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+
+        // 拖拽上傳
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            images = [];
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const fileName = file.name.replace(/\.[^/.]+$/, "");
+                        images.push({
+                            name: fileName,
+                            src: e.target.result
+                        });
+                        
+                        if (images.length === Array.from(files).filter(f => f.type.startsWith('image/')).length) {
+                            updateUI();
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function updateUI() {
+            if (images.length > 0) {
+                startBtn.disabled = false;
+                startBtn.textContent = `🚀 開始競賽 (${images.length} 張圖片)`;
+            } else {
+                startBtn.disabled = true;
+                startBtn.textContent = '🚀 開始競賽';
+            }
+        }
+
+        function createCards() {
+            cards = [];
+            let cardId = 1;
+
+            images.forEach((image, index) => {
+                // 圖片卡片
+                cards.push({
+                    id: cardId++,
+                    type: 'image',
+                    content: image.src,
+                    pairId: index,
+                    isFlipped: false,
+                    isMatched: false
+                });
+
+                // 名稱卡片
+                cards.push({
+                    id: cardId++,
+                    type: 'text',
+                    content: image.name,
+                    pairId: index,
+                    isFlipped: false,
+                    isMatched: false
+                });
+            });
+
+            shuffleArray(cards);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function startCountdown() {
+            const countdownTime = parseInt(document.getElementById('countdownTime').value) || 3;
+            let count = countdownTime;
+            
+            // 顯示先開始的隊伍
+            const startingTeamName = currentTeam === 1 ? team1Name : team2Name;
+            document.getElementById('startingTeamText').textContent = `隨機選中：${startingTeamName}先開始`;
+            
+            countdownOverlay.style.display = 'flex';
+            document.getElementById('countdownNumber').textContent = count;
+            
+            const countdownInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    document.getElementById('countdownNumber').textContent = count;
+                } else {
+                    document.getElementById('countdownNumber').textContent = "開始！";
+                    setTimeout(() => {
+                        clearInterval(countdownInterval);
+                        countdownOverlay.style.display = 'none';
+                        actuallyStartGame();
+                    }, 1000);
+                }
+            }, 1000);
+        }
+
+        function startGame() {
+            if (images.length === 0) return;
+
+            // 更新隊伍名稱
+            team1Name = document.getElementById('team1Name').value || "藍隊";
+            team2Name = document.getElementById('team2Name').value || "紅隊";
+            
+            document.getElementById('team1NameDisplay').textContent = team1Name;
+            document.getElementById('team2NameDisplay').textContent = team2Name;
+
+            // 隨機選擇先開始的隊伍
+            currentTeam = Math.random() < 0.5 ? 1 : 2;
+            team1Score = 0;
+            team2Score = 0;
+            gameTime = 0;
+            flippedCards = [];
+
+            // 隱藏設定和上傳區域
+            setupSection.style.display = 'none';
+            uploadSection.classList.add('hidden');
+            document.getElementById('toggleUploadBtn').style.display = 'inline-block';
+
+            createCards();
+            
+            // 開始倒數計時
+            startCountdown();
+        }
+
+        function actuallyStartGame() {
+            gameStarted = true;
+            
+            // 顯示遊戲界面
+            teamStatus.style.display = 'flex';
+            gameTimerDiv.style.display = 'block';
+            
+            // 顯示隨機選中的起始隊伍
+            console.log(`隨機選中 ${currentTeam === 1 ? team1Name : team2Name} 先開始！`);
+            updateTeamStatus();
+            updateScores();
+            
+            renderCards();
+            startGameTimer();
+        }
+
+        function startGameTimer() {
+            gameTimer = setInterval(() => {
+                gameTime++;
+                const minutes = Math.floor(gameTime / 60);
+                const seconds = gameTime % 60;
+                document.getElementById('timerDisplay').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function updateTeamStatus() {
+            const team1Panel = document.getElementById('team1Panel');
+            const team2Panel = document.getElementById('team2Panel');
+            
+            // 移除之前的指示器
+            team1Panel.querySelector('.current-turn')?.remove();
+            team2Panel.querySelector('.current-turn')?.remove();
+            
+            if (currentTeam === 1) {
+                team1Panel.className = 'team-panel active';
+                team2Panel.className = 'team-panel inactive';
+                
+                // 添加當前回合指示器
+                const indicator = document.createElement('div');
+                indicator.className = 'current-turn';
+                indicator.textContent = '當前回合';
+                team1Panel.appendChild(indicator);
+            } else {
+                team1Panel.className = 'team-panel inactive';
+                team2Panel.className = 'team-panel active';
+                
+                // 添加當前回合指示器
+                const indicator = document.createElement('div');
+                indicator.className = 'current-turn';
+                indicator.textContent = '當前回合';
+                team2Panel.appendChild(indicator);
+            }
+        }
+
+        function updateScores() {
+            document.getElementById('team1Score').textContent = team1Score;
+            document.getElementById('team2Score').textContent = team2Score;
+        }
+
+        function switchTeam() {
+            currentTeam = currentTeam === 1 ? 2 : 1;
+            const nextTeamName = currentTeam === 1 ? team1Name : team2Name;
+            
+            // 顯示換隊倒數
+            switchingTeam = true;
+            teamSwitchOverlay.style.display = 'flex';
+            document.getElementById('nextTeamName').textContent = nextTeamName;
+            
+            let count = 3;
+            document.querySelector('#teamSwitchDisplay > div:last-child').textContent = count;
+            
+            const switchInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    document.querySelector('#teamSwitchDisplay > div:last-child').textContent = count;
+                } else {
+                    document.querySelector('#teamSwitchDisplay > div:last-child').textContent = "開始！";
+                    setTimeout(() => {
+                        clearInterval(switchInterval);
+                        teamSwitchOverlay.style.display = 'none';
+                        switchingTeam = false;
+                        updateTeamStatus();
+                    }, 1000);
+                }
+            }, 1000);
+        }
+
+        function renderCards() {
+            gameBoard.innerHTML = '';
+            
+            cards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'card';
+                cardElement.setAttribute('data-id', card.id);
+                
+                if (card.isMatched) {
+                    cardElement.classList.add('matched');
+                }
+                
+                if (card.isFlipped) {
+                    cardElement.classList.add('flipped');
+                }
+
+                cardElement.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-back">${card.id}</div>
+                        <div class="card-front">
+                            ${card.type === 'image' 
+                                ? `<img src="${card.content}" class="card-image" alt="圖片">` 
+                                : `<div class="card-text">${card.content}</div>`
+                            }
+                        </div>
+                    </div>
+                `;
+
+                cardElement.addEventListener('click', () => flipCard(card.id));
+                gameBoard.appendChild(cardElement);
+            });
+        }
+
+        function flipCard(cardId) {
+            if (!gameStarted || switchingTeam) return;
+            
+            const card = cards.find(c => c.id === cardId);
+            if (!card || card.isFlipped || card.isMatched || flippedCards.length >= 2) return;
+
+            card.isFlipped = true;
+            flippedCards.push(card);
+            
+            const cardElement = document.querySelector(`[data-id="${cardId}"]`);
+            cardElement.classList.add('flipped');
+
+            if (flippedCards.length === 2) {
+                setTimeout(() => {
+                    checkMatch();
+                }, 1000);
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            
+            if (card1.pairId === card2.pairId && card1.type !== card2.type) {
+                // 配對成功
+                card1.isMatched = true;
+                card2.isMatched = true;
+                
+                const cardElement1 = document.querySelector(`[data-id="${card1.id}"]`);
+                const cardElement2 = document.querySelector(`[data-id="${card2.id}"]`);
+                cardElement1.classList.add('matched');
+                cardElement2.classList.add('matched');
+                
+                // 當前隊伍得分
+                if (currentTeam === 1) {
+                    team1Score++;
+                } else {
+                    team2Score++;
+                }
+                updateScores();
+                
+                // 檢查遊戲是否結束
+                if (team1Score + team2Score === images.length) {
+                    endGame();
+                }
+                // 正確配對可以繼續翻牌，不換隊
+            } else {
+                // 配對失敗，翻回來並換隊
+                card1.isFlipped = false;
+                card2.isFlipped = false;
+                
+                const cardElement1 = document.querySelector(`[data-id="${card1.id}"]`);
+                const cardElement2 = document.querySelector(`[data-id="${card2.id}"]`);
+                cardElement1.classList.remove('flipped');
+                cardElement2.classList.remove('flipped');
+                
+                // 換隊
+                switchTeam();
+            }
+            
+            flippedCards = [];
+        }
+
+        function endGame() {
+            gameStarted = false;
+            clearInterval(gameTimer);
+            
+            // 確定獲勝者
+            let winner, winnerScore, loserScore;
+            if (team1Score > team2Score) {
+                winner = team1Name;
+                winnerScore = team1Score;
+                loserScore = team2Score;
+            } else if (team2Score > team1Score) {
+                winner = team2Name;
+                winnerScore = team2Score;
+                loserScore = team1Score;
+            } else {
+                winner = "平手";
+            }
+            
+            // 顯示結果
+            const winnerAnnouncement = document.getElementById('winnerAnnouncement');
+            const finalScores = document.getElementById('finalScores');
+            
+            if (winner === "平手") {
+                winnerAnnouncement.textContent = "🤝 平手！";
+            } else {
+                winnerAnnouncement.textContent = `🏆 ${winner}獲勝！`;
+            }
+            
+            const minutes = Math.floor(gameTime / 60);
+            const seconds = gameTime % 60;
+            const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            finalScores.innerHTML = `
+                <div>${team1Name}：${team1Score} 分</div>
+                <div>${team2Name}：${team2Score} 分</div>
+                <div>遊戲時間：${timeString}</div>
+            `;
+            
+            gameOverOverlay.style.display = 'flex';
+        }
+
+        function resetGame() {
+            gameStarted = false;
+            currentTeam = 1;
+            team1Score = 0;
+            team2Score = 0;
+            gameTime = 0;
+            flippedCards = [];
+            switchingTeam = false;
+            
+            if (gameTimer) {
+                clearInterval(gameTimer);
+            }
+            
+            // 隱藏遊戲界面
+            teamStatus.style.display = 'none';
+            gameTimerDiv.style.display = 'none';
+            gameOverOverlay.style.display = 'none';
+            teamSwitchOverlay.style.display = 'none';
+            
+            // 顯示設定區域
+            setupSection.style.display = 'block';
+            uploadSection.classList.remove('hidden');
+            document.getElementById('toggleUploadBtn').style.display = 'none';
+            
+            if (images.length > 0) {
+                gameBoard.innerHTML = '';
+            }
+        }
+
+        function clearImages() {
+            images = [];
+            cards = [];
+            resetGame();
+            fileInput.value = '';
+            updateUI();
+        }
+
+        function toggleUpload() {
+            const toggleBtn = document.getElementById('toggleUploadBtn');
+            if (uploadSection.classList.contains('hidden')) {
+                uploadSection.classList.remove('hidden');
+                toggleBtn.textContent = '📁 隱藏上傳區';
+            } else {
+                uploadSection.classList.add('hidden');
+                toggleBtn.textContent = '📁 顯示上傳區';
+            }
+        }
+    </script>
+</body>
+</html>
